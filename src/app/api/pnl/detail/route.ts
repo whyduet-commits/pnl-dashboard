@@ -152,8 +152,8 @@ function buildResponse(data: any[], labelA: string, labelB: string) {
   const groupVals: Record<string, { a: number; b: number }> = {};
   for (const [gk, ids] of Object.entries(GROUPS)) {
     groupVals[gk] = {
-      a: getSum(ids as number[], labelA),
-      b: getSum(ids as number[], labelB),
+      a: getSum([...ids] as number[], labelA),
+      b: getSum([...ids] as number[], labelB),
     };
   }
 
