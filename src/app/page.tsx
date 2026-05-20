@@ -191,7 +191,6 @@ function DonutChart({ config }: { config:DonutConfig }) {
             );
           })}
         </div>
-          )}
       </div>
     </div>
   );
