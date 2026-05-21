@@ -144,12 +144,13 @@ export default function NaverMap({ year }: Props) {
       const txtColor=isUp?"#0a0a0a":"#fff";
       const yoyStr  =yoy!=null?`${yoy>=0?"▲":"▼"}${Math.abs(yoy).toFixed(1)}%`:"—";
 
+      const yoySpan = size>38 ? '<span style="font-size:8px;color:'+txtColor+';opacity:0.9;">'+yoyStr+'</span>' : "";
       const html=`
         <div style="width:${size}px;height:${size}px;background:${color};border-radius:50%;
           display:flex;flex-direction:column;align-items:center;justify-content:center;
           cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.25);border:2px solid rgba(255,255,255,0.15);">
           <span style="font-size:${size>42?10:9}px;font-weight:700;color:${txtColor};line-height:1.2;text-align:center;">${academy.name}</span>
-          ${size>38?`<span style="font-size:8px;color:${txtColor};opacity:0.9;">${yoyStr}</span>`:""}
+          ${yoySpan}
         </div>`;
 
       const marker=new naver.maps.Marker({
@@ -182,14 +183,13 @@ export default function NaverMap({ year }: Props) {
   const mapBg      = theme==="dark" ? "#0a0a0a" : "#e8e8e8";
 
   return (
-    <div style={{ background:cardBg, borderRadius:12, padding:"14px", border:`1px solid ${borderCol}` }}>
-      {/* 헤더 */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, flexWrap:"wrap", gap:6 }}>
-        <div>
-          <div style={{ fontSize:13, fontWeight:700, color:textPri }}>학원별 매출 현황</div>
-          <div style={{ fontSize:11, color:textMuted }}>
-            {year>=2026?`${year}년(E)`:`${year}년`} · 버블 크기 = 매출액
-          </div>
+    <div>
+      {/* 섹션 바 */}
+      <div style={{ background:"rgba(120,120,120,0.07)", border:`1px solid ${borderCol}`, borderRadius:8, padding:"7px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, flexWrap:"wrap", gap:6 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ width:3, height:14, background:"#c8f04a", borderRadius:2, display:"inline-block", flexShrink:0 }} />
+          <span style={{ fontSize:12, fontWeight:700, color:textPri }}>학원별 매출 현황</span>
+          <span style={{ fontSize:11, color:textMuted }}>{year>=2026?`${year}년(E)`:`${year}년`} · 버블 크기 = 매출액</span>
         </div>
         <div style={{ display:"flex", gap:8 }}>
           {[{color:"#c8f04a",label:"YoY ▲"},{color:"#ef4444",label:"YoY ▼"}].map(l=>(
@@ -199,6 +199,7 @@ export default function NaverMap({ year }: Props) {
           ))}
         </div>
       </div>
+    <div style={{ background:cardBg, borderRadius:12, padding:"14px", border:`1px solid ${borderCol}` }}>
 
       {/* 지역 필터 버튼 */}
       <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:10 }}>
@@ -286,6 +287,7 @@ export default function NaverMap({ year }: Props) {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

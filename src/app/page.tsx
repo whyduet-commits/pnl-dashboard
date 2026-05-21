@@ -310,25 +310,28 @@ export default function Dashboard() {
       </div>
     ));
     const op2Yoy=kpi.op_profit2.prev!=null&&Math.abs(kpi.op_profit2.prev)<5?null:kpi.op_profit2.yoy;
+    const yr=filters.year; const estSuffix=yr>=2026?"(추정)":"";
     const cards=[
-      {badge:"매출",      color:T.yellow, borderColor:T.yellow, value:fmt(kpi.revenue.actual),    yoy:kpi.revenue.yoy,   yoySuffix:"%",  yoyAbs:kpi.revenue.yoyAbs!=null?`${kpi.revenue.yoyAbs>=0?"+":""}${kpi.revenue.yoyAbs}억원`:null, targetLabel:"계획 대비", targetValue:kpi.revenue.achievement},
-      {badge:"영업이익Ⅱ", color:T.yellow, borderColor:T.yellow, value:fmt(kpi.op_profit2.actual), yoy:op2Yoy,            yoySuffix:"%p", yoyAbs:kpi.op_profit2.yoyAbs!=null?`${kpi.op_profit2.yoyAbs>=0?"+":""}${kpi.op_profit2.yoyAbs}억원`:null, targetLabel:"계획 대비", targetValue:kpi.op_profit2.achievement},
-      {badge:"영업이익률", color:T.green,  borderColor:T.green,  value:fmtPct(kpi.op_margin.actual), yoy:kpi.op_margin.yoy, yoySuffix:"%p", yoyAbs:null, targetLabel:"계획 대비", targetValue:kpi.op_margin.vs_plan, isRate:true},
-      {badge:"목표달성률", color:T.green,  borderColor:T.green,  value:fmtPct(kpi.target_achievement.revenue_rate), yoy:null, yoySuffix:"%", yoyAbs:null, targetLabel:"달성금액", targetText:`${kpi.revenue.actual??"—"}억원 / ${kpi.revenue.plan??"—"}억원`, targetValue:kpi.target_achievement.revenue_rate},
+      {badge:`${yr}년 매출${estSuffix}`,      color:T.yellow, borderColor:T.yellow, value:fmt(kpi.revenue.actual),    yoy:kpi.revenue.yoy,   yoySuffix:"%",  yoyAbs:kpi.revenue.yoyAbs!=null?`${kpi.revenue.yoyAbs>=0?"+":""}${kpi.revenue.yoyAbs}억원`:null, targetLabel:"계획 대비", targetValue:kpi.revenue.achievement},
+      {badge:`${yr}년 영업이익Ⅱ${estSuffix}`, color:T.yellow, borderColor:T.yellow, value:fmt(kpi.op_profit2.actual), yoy:op2Yoy,            yoySuffix:"%p", yoyAbs:kpi.op_profit2.yoyAbs!=null?`${kpi.op_profit2.yoyAbs>=0?"+":""}${kpi.op_profit2.yoyAbs}억원`:null, targetLabel:"계획 대비", targetValue:kpi.op_profit2.achievement},
+      {badge:`${yr}년 영업이익률${estSuffix}`, color:T.green,  borderColor:T.green,  value:fmtPct(kpi.op_margin.actual), yoy:kpi.op_margin.yoy, yoySuffix:"%p", yoyAbs:null, targetLabel:"계획 대비", targetValue:kpi.op_margin.vs_plan, isRate:true},
+      {badge:`${yr}년 목표달성률`,             color:T.green,  borderColor:T.green,  value:fmtPct(kpi.target_achievement.revenue_rate), yoy:null, yoySuffix:"%", yoyAbs:null, targetLabel:"달성금액", targetText:`${kpi.revenue.actual??"—"}억원 / ${kpi.revenue.plan??"—"}억원`, targetValue:kpi.target_achievement.revenue_rate},
     ];
     return cards.map((k:any)=>(
       <div key={k.badge} style={{ background:T.bgCard, borderRadius:10, padding:"16px 18px", border:`1px solid ${T.border}`, borderTop:`2px solid ${k.borderColor}`, display:"flex", flexDirection:"column", gap:8 }}>
-        <span style={{ fontSize:11, fontWeight:700, color:k.color }}>{k.badge}</span>
+        <span style={{ fontSize:12, fontWeight:700, color:k.color, lineHeight:1.3 }}>{k.badge}</span>
         <div style={{ fontSize:26, fontWeight:800, letterSpacing:"-0.03em", color:T.textPri, lineHeight:1.1 }}>{k.value}</div>
-        <div style={{ fontSize:11 }}>
-          <span style={{ color:T.textMuted }}>전년 대비 </span>
-          <Pill value={k.yoy??null} suffix={k.yoySuffix??"%"} />
-          {k.yoyAbs&&<span style={{ color:T.textMuted, marginLeft:4 }}>({k.yoyAbs})</span>}
+        <div style={{ fontSize:11, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <span style={{ color:T.textMuted }}>전년 대비</span>
+          <span>
+            <Pill value={k.yoy??null} suffix={k.yoySuffix??"%"} />
+            {k.yoyAbs&&<span style={{ color:T.textMuted, marginLeft:4 }}>({k.yoyAbs})</span>}
+          </span>
         </div>
         <div style={{ fontSize:11, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <span style={{ color:T.textMuted }}>{k.targetLabel}</span>
           {k.targetText?<span style={{ fontWeight:600, fontSize:11, color:T.textPri }}>{k.targetText}</span>
-            :k.isRate?<Pill value={k.targetValue??null} suffix="p"/>
+            :k.isRate?<Pill value={k.targetValue??null} suffix="%p"/>
             :<span style={{ fontWeight:700, fontSize:12, color:k.color }}>{k.targetValue!=null?fmtPct(k.targetValue):"—"}</span>}
         </div>
         {!k.isRate&&k.color&&<ProgressBar value={k.targetValue??null} color={k.color}/>}
@@ -395,14 +398,14 @@ export default function Dashboard() {
           {/* AI 분석 */}
           <div style={{ marginBottom:12 }}>
             {!aiGenerated?(
-              <div style={{ background:T.bgCard, border:`1px solid rgba(245,196,24,0.15)`, borderRadius:10, padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:700, color:T.yellow }}>AI 분석 코멘트</div>
-                  <div style={{ fontSize:10, color:T.textMuted }}>현재 조회 조건 기준으로 분석합니다</div>
-                </div>
-                <button onClick={fetchAiComment} disabled={aiLoading} style={{ padding:"8px 20px", borderRadius:8, border:"none", background:aiLoading?`rgba(245,196,24,0.2)`:T.yellow, color:aiLoading?T.textMuted:"#000", fontSize:12, fontWeight:700, cursor:aiLoading?"not-allowed":"pointer", transition:"all 0.15s" }}>
+              <div style={{ background:T.bgCard, border:`1px solid rgba(245,196,24,0.15)`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
+                <button onClick={fetchAiComment} disabled={aiLoading} style={{ flexShrink:0, padding:"7px 18px", borderRadius:8, border:"none", background:aiLoading?`rgba(245,196,24,0.2)`:T.yellow, color:aiLoading?"rgba(255,255,255,0.5)":"#000", fontSize:12, fontWeight:700, cursor:aiLoading?"not-allowed":"pointer", transition:"all 0.15s", whiteSpace:"nowrap" }}>
                   {aiLoading?"분석 중...":"AI 분석 시작"}
                 </button>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:700, color:T.textPri }}>AI 분석 코멘트</div>
+                  <div style={{ fontSize:10, color:T.textMuted }}>현재 조회 조건 기준으로 분석합니다</div>
+                </div>
               </div>
             ):(
               <div style={{ position:"relative" }}>
@@ -415,7 +418,7 @@ export default function Dashboard() {
           {/* KPI 5개 */}
           <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:12 }}>
             <div style={{ background:T.bgCard, borderRadius:10, padding:"16px 18px", border:`1px solid ${T.border}`, borderTop:`2px solid ${T.green}`, display:"flex", flexDirection:"column", gap:8 }}>
-              <span style={{ fontSize:11, fontWeight:700, color:T.green }}>연평균성장률</span>
+              <span style={{ fontSize:13, fontWeight:800, color:T.green }}>연평균성장률</span>
               <div style={{ display:"flex", alignItems:"center", gap:5 }}>
                 <select value={cagrStart} onChange={e=>setCagrStart(Number(e.target.value))} style={{ ...selStyle, flex:1 }}>
                   {[2021,2022,2023,2024,2025].map(y=><option key={y} value={y}>{y}년</option>)}
@@ -432,23 +435,62 @@ export default function Dashboard() {
             {renderKpiCards()}
           </div>
 
+          {/* 구분 탭 1 + 손익 섹션 바: 2열 동시 배치 */}
+          <div style={{ display:"grid", gridTemplateColumns:"1.5fr 1fr", gap:10, marginBottom:8 }}>
+            <div style={{ background:`rgba(120,120,120,0.07)`, border:`1px solid ${T.border}`, borderRadius:8, padding:"7px 14px", display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:3, height:14, background:T.yellow, borderRadius:2, display:"inline-block", flexShrink:0 }} />
+              <span style={{ fontSize:12, fontWeight:700, color:T.textPri }}>월별 현황</span>
+              <span style={{ fontSize:11, color:T.textMuted }}>전년 비교</span>
+              {/* 범례: 월별 현황 바에 한 번만 표시 */}
+              <div style={{ marginLeft:"auto", display:"flex", gap:10 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:3, fontSize:9, color:T.textMuted }}><span style={{ width:7,height:7,borderRadius:2,background:T.yellow,display:"inline-block" }}></span>{yearLabel(filters.year)}</div>
+                <div style={{ display:"flex", alignItems:"center", gap:3, fontSize:9, color:T.textMuted }}><span style={{ width:7,height:7,borderRadius:2,background:"rgba(150,150,150,0.5)",display:"inline-block" }}></span>{filters.year-1}년</div>
+              </div>
+            </div>
+            {/* 손익 상세 현황 섹션 바 - 동일 행에 배치 */}
+            <div style={{ background:`rgba(120,120,120,0.07)`, border:`1px solid ${T.border}`, borderRadius:8, padding:"7px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:6 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ width:3, height:14, background:T.yellow, borderRadius:2, display:"inline-block", flexShrink:0 }} />
+                <span style={{ fontSize:12, fontWeight:700, color:T.textPri }}>손익 상세 현황</span>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                  <span style={{ fontSize:8, color:T.textMuted }}>기준</span>
+                  <select value={pnlLabelA} onChange={e=>setPnlLabelA(e.target.value)} style={selStyle}>
+                    {ALL_LABELS.map(l=><option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+                <span style={{ fontSize:10, color:T.textMuted }}>vs</span>
+                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                  <span style={{ fontSize:8, color:T.textMuted }}>비교</span>
+                  <select value={pnlLabelB} onChange={e=>setPnlLabelB(e.target.value)} style={selStyle}>
+                    {ALL_LABELS.map(l=><option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* 메인 2열 */}
           <div style={{ display:"grid", gridTemplateColumns:"1.5fr 1fr", gap:10 }}>
             <div style={{ display:"flex", flexDirection:"column", gap:10, overflow:"visible" }}>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
                 {CHART_CONFIGS.map(cfg=>(
                   <div key={cfg.accountId} style={{ background:T.bgCard, borderRadius:10, padding:"10px 12px", border:`1px solid ${T.border}` }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:T.textPri, marginBottom:1 }}>월별 {cfg.title} 추이</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.textPri, marginBottom:1 }}>{cfg.title} 추이</div>
                     <div style={{ fontSize:8, color:T.textMuted, marginBottom:4 }}>{yearLabel(filters.year)} vs {filters.year-1}년</div>
-                    <div style={{ display:"flex", gap:8, marginBottom:4 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:3, fontSize:8, color:T.textMuted }}><span style={{ width:7,height:7,borderRadius:2,background:cfg.color,display:"inline-block" }}></span>{yearLabel(filters.year)}</div>
-                      <div style={{ display:"flex", alignItems:"center", gap:3, fontSize:8, color:T.textMuted }}><span style={{ width:7,height:7,borderRadius:2,background:"rgba(150,150,150,0.5)",display:"inline-block" }}></span>{filters.year-1}년</div>
-                    </div>
                     {chartLoading?<div style={{ height:90, display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ fontSize:10, color:T.textMuted }}>로딩 중...</span></div>
                       :<MonthlyChart data={chartDataMap[cfg.accountId]??[]} year={filters.year} color={cfg.color} height={90} />}
                   </div>
                 ))}
               </div>
+
+              {/* 구분 탭 2: 구성비 현황 */}
+              <div style={{ background:`rgba(120,120,120,0.07)`, border:`1px solid ${T.border}`, borderRadius:8, padding:"7px 14px", display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ width:3, height:14, background:T.green, borderRadius:2, display:"inline-block", flexShrink:0 }} />
+                <span style={{ fontSize:12, fontWeight:700, color:T.textPri }}>구성비 현황</span>
+              </div>
+
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, overflow:"visible" }}>
                 <DonutChartsRow kpi={kpi} />
               </div>
@@ -456,25 +498,8 @@ export default function Dashboard() {
             </div>
 
             {/* 우측: 손익 상세 */}
-            <div style={{ background:T.bgCard, borderRadius:10, padding:"14px", border:`1px solid ${T.border}`, display:"flex", flexDirection:"column", position:"sticky", top:0, maxHeight:"calc(100vh - 90px)", overflow:"hidden" }}>
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10, flexWrap:"wrap", gap:6 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:T.textPri }}>손익 상세 현황</div>
-                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                  <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                    <span style={{ fontSize:8, color:T.textMuted }}>기준</span>
-                    <select value={pnlLabelA} onChange={e=>setPnlLabelA(e.target.value)} style={selStyle}>
-                      {ALL_LABELS.map(l=><option key={l} value={l}>{l}</option>)}
-                    </select>
-                  </div>
-                  <span style={{ fontSize:10, color:T.textMuted }}>vs</span>
-                  <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                    <span style={{ fontSize:8, color:T.textMuted }}>비교</span>
-                    <select value={pnlLabelB} onChange={e=>setPnlLabelB(e.target.value)} style={selStyle}>
-                      {ALL_LABELS.map(l=><option key={l} value={l}>{l}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:0, position:"sticky", top:0, maxHeight:"calc(100vh - 90px)" }}>
+              <div style={{ background:T.bgCard, borderRadius:10, padding:"14px", border:`1px solid ${T.border}`, display:"flex", flexDirection:"column", overflow:"hidden", flex:1 }}>
               {pnlLoading||!pnlData
                 ?<div style={{ padding:"40px", textAlign:"center", color:T.textMuted, fontSize:11 }}>로딩 중...</div>
                 :(
@@ -513,6 +538,7 @@ export default function Dashboard() {
                     </table>
                   </div>
                 )}
+              </div>
             </div>
           </div>
           </div>

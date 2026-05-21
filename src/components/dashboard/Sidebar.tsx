@@ -13,9 +13,12 @@ const MENU = [
     { icon: "📈", label: "등록 추이(학원별)", path: "/students/enrollment" },
     { icon: "🎯", label: "입결 현황",         path: "/students/scores" },
   ]},
-  { icon: "🗺",   label: "FloorEdit",       path: "/floor"      },
   { icon: "📊",   label: "단과 판매 분석", path: "/sales"      },
-  { icon: "👨‍🏫", label: "개별 강사 현황", path: "/instructor" },
+  { icon: "👨‍🏫", label: "강사 현황", path: null, sub: [
+    { icon: "👤", label: "강사 프로필 조회", path: "/instructor/profile" },
+    { icon: "📊", label: "단과 강사 판매 현황", path: "/instructor" },
+  ]},
+  { icon: "🗺",   label: "FloorEdit",       path: "/floor"      },
 ];
 
 function NavBtn({ icon, label, active, onClick, sub = false, T }: {
@@ -82,8 +85,8 @@ export default function Sidebar() {
   const isActive = (path: string | null): boolean => {
     if (!path) return false;
     if (path === "/") return pathname === "/";
-    // 정확히 일치하거나, path + "/" 로 시작하는 경우만 active
-    return pathname === path || pathname.startsWith(path + "/");
+    // 정확히 일치하는 경우만 active (startsWith 제거로 중복 음영 방지)
+    return pathname === path;
   };
 
   return (
@@ -104,12 +107,8 @@ export default function Sidebar() {
         }}
         onClick={() => router.push("/")}
       >
-        <div style={{
-          width: 26, height: 26, background: "#F5C418",
-          borderRadius: 6, flexShrink: 0,
-        }} />
         <div style={{ fontSize: 12, fontWeight: 700, color: T.textPri }}>
-          손익 Dashboard
+          GROWTH MONITOR
         </div>
       </div>
 
@@ -175,7 +174,7 @@ export default function Sidebar() {
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: T.textPri }}>
-              홍길동 관리자
+              관리자 황정우
             </div>
             <div style={{ fontSize: 9, color: T.textMuted }}>중점본부</div>
           </div>

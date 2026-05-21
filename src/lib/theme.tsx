@@ -62,12 +62,12 @@ const ThemeContext = createContext<ThemeCtx>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
 
-  useEffect(() => {
-    const saved = localStorage.getItem("pnl-theme") as Theme | null;
-    if (saved === "light" || saved === "dark") setTheme(saved);
-  }, []);
+useEffect(() => {
+  const saved = localStorage.getItem("pnl-theme") as Theme | null;
+  if (saved === "light" || saved === "dark") setTheme(saved);
+}, []);
 
   const toggle = () => {
     setTheme(prev => {
