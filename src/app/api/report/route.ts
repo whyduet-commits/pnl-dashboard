@@ -29,6 +29,12 @@ const ORG_NAMES: Record<number, string> = {
 function eok(v: number): number {
   return Math.round(v / 1e8 * 10) / 10;
 }
+function achv(a: number, b: number): number | null {
+  if (!b) return null;
+  if (b < 0) return a !== 0 ? Math.round((b / a) * 100 * 10) / 10 : null;
+  return Math.round((a / b) * 100 * 10) / 10;
+}
+
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -109,6 +115,10 @@ export async function GET(req: NextRequest) {
   const revYPrev = sumYtd(1,   labelPrev);
   const opYPrev  = sumYtd(285, labelPrev);
 
+  // 누계 계획 (1월~선택월)
+  const revPlanYtd = sumYtd(1,   labelPlan);
+  const opPlanYtd  = sumYtd(285, labelPlan);
+
   // 연간 계획/목표 합계
   const revPlan   = sumPlan(1,   labelPlan);
   const opPlan    = sumPlan(285, labelPlan);
@@ -138,16 +148,16 @@ export async function GET(req: NextRequest) {
       rev_plan_m:    eok(revPlanM),
       op_plan_m:     eok(opPlanM),
       sga_plan_m:    eok(sgaPlanM),
-      rev_achievement_m:  revPlanM ? Math.round(revM  / revPlanM * 1000) / 10 : null,
-      op_achievement_m:   opPlanM  ? Math.round(opM   / opPlanM  * 1000) / 10 : null,
-      sga_achievement_m:  sgaPlanM ? Math.round(sgaM  / sgaPlanM * 1000) / 10 : null,
+      rev_achievement_m:  revPlanM ? achv(revM, revPlanM)  : null,
+      op_achievement_m:   opPlanM  ? achv(opM,  opPlanM)   : null,
+      sga_achievement_m:  sgaPlanM ? achv(sgaM, sgaPlanM)  : null,
     },
     ytd: {
       revenue:   { actual: eok(revY), prev: eok(revYPrev), yoy: yoy(revY, revYPrev) },
       op_profit: { actual: eok(opY),  prev: eok(opYPrev),  yoy: yoy(opY, opYPrev) },
       op_margin: revY ? Math.round(opY / revY * 1000) / 10 : 0,
-      rev_achievement: revPlan ? Math.round(revY / revPlan * 1000) / 10 : null,
-      op_achievement:  opPlan  ? Math.round(opY  / opPlan  * 1000) / 10 : null,
+      rev_achievement: revPlanYtd ? achv(revY, revPlanYtd) : null,
+      op_achievement:  opPlanYtd  ? achv(opY,  opPlanYtd)  : null,
     },
   };
 

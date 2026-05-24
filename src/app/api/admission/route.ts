@@ -22,13 +22,13 @@ const ORG_MAP: Record<string,{hq1:string;hq2:string}> = {
   "종합관":         { hq1:"중점본부", hq2:"기숙" },
 };
 
-// 전체 데이터 페이지네이션으로 가져오기
-async function fetchAll(query: any): Promise<any[]> {
+// 전체 데이터 페이지네이션
+async function fetchAll(baseQuery: any): Promise<any[]> {
   const PAGE = 1000;
   let all: any[] = [];
   let from = 0;
   while (true) {
-    const { data, error } = await query.range(from, from + PAGE - 1);
+    const { data, error } = await baseQuery.range(from, from + PAGE - 1);
     if (error) throw new Error(error.message);
     if (!data || data.length === 0) break;
     all = all.concat(data);
@@ -40,10 +40,9 @@ async function fetchAll(query: any): Promise<any[]> {
 
 function categorize(row: any): string[] {
   const cats: string[] = [];
-  // 공백 trim 처리
   const g2 = (row.univ_group2 ?? "").trim();
-  const u  = (row.university   ?? "").trim();
-  const g  = (row.univ_group   ?? "").trim();
+  const u  = (row.university  ?? "").trim();
+  const g  = (row.univ_group  ?? "").trim();
 
   if (u === "서울대" && g2 === "의예과") cats.push("cat1");
   if (MAJOR_UNIV.includes(u) && g2 === "의예과") cats.push("cat2");
@@ -59,23 +58,24 @@ function categorize(row: any): string[] {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const hq1    = searchParams.get("hq1") ?? "전체";
-  const hq2    = searchParams.get("hq2") ?? "전체";
-  const academy= searchParams.get("academy") ?? "전체";
+  const hq1     = searchParams.get("hq1")     ?? "전체";
+  const hq2     = searchParams.get("hq2")     ?? "전체";
+  const academy = searchParams.get("academy") ?? "전체";
+  const admType = searchParams.get("admType") ?? "전체";  // 수시 | 정시 | 전체
+  const selYear = Number(searchParams.get("selYear") ?? 2026);
 
   let data: any[];
   try {
-    // ✅ 페이지네이션으로 전체 데이터 조회
     data = await fetchAll(
       supabase
         .from("admission_results")
-        .select("year,academy,university,univ_group,univ_group2")
+        .select("year,academy,university,univ_group,univ_group2,admission_type")
     );
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 
-  // 학원/본부/부문 필터
+  // 학원/본부/부문/전형 필터
   const filtered = data.filter((r: any) => {
     const ac  = (r.academy ?? "").trim();
     const org = ORG_MAP[ac] ?? { hq1:"기타", hq2:"기타" };
@@ -83,6 +83,11 @@ export async function GET(req: NextRequest) {
     if (academy === "전체") {
       if (hq2 !== "전체" && org.hq2 !== hq2) return false;
       if (hq1 !== "전체" && hq2 === "전체" && org.hq1 !== hq1) return false;
+    }
+    // 수시/정시 필터
+    if (admType !== "전체") {
+      const at = (r.admission_type ?? "").trim();
+      if (at !== admType) return false;
     }
     return true;
   });
@@ -100,20 +105,31 @@ export async function GET(req: NextRequest) {
     categorize(r).forEach(c => { countMap[y][c]++; });
   });
 
-  // KPI: 전체 학원 2026년 기준 (필터 완전 무시)
+  // KPI: 전체 학원 selYear 기준 (학원/부문 필터 무시, admType 필터만 적용)
   const kpi: Record<string,number> = {};
   cats.forEach(c => { kpi[c] = 0; });
   data
-    .filter((r: any) => Number(r.year) === 2026)
+    .filter((r: any) => {
+      if (Number(r.year) !== selYear) return false;
+      if (admType !== "전체") {
+        const at = (r.admission_type ?? "").trim();
+        if (at !== admType) return false;
+      }
+      return true;
+    })
     .forEach((r: any) => { categorize(r).forEach(c => { kpi[c]++; }); });
 
-  // 학원 목록 (전체 데이터 기준)
+  // 학원 목록
   const academyList = [...new Set(
     data.map((r: any) => (r.academy ?? "").trim()).filter(Boolean)
   )].sort() as string[];
 
-  // 디버그: 개발 중 확인용 (배포 시 제거)
-  console.log(`[admission] total=${data.length}, filtered=${filtered.length}, academies=${academyList.length}`);
+  console.log(`[admission] total=${data.length}, filtered=${filtered.length}, academies=${academyList.length}, admType=${admType}`);
+  // admType 샘플 확인
+  if (admType !== "전체") {
+    const sample = data.slice(0,3).map((r:any) => r.admission_type);
+    console.log(`[admission] admType 샘플:`, sample);
+  }
 
   return NextResponse.json({ countMap, kpi, academyList });
 }

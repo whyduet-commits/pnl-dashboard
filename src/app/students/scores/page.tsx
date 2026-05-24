@@ -40,6 +40,7 @@ export default function ScoresPage() {
   const [hq1,         setHq1]         = useState("전체");
   const [hq2,         setHq2]         = useState("전체");
   const [academy,     setAcademy]     = useState("전체");
+  const [admType,     setAdmType]     = useState("전체");   // 전체 | 수시 | 정시
   const [selYear,     setSelYear]     = useState(2026);
   const [academyList, setAcademyList] = useState<string[]>([]);
 
@@ -51,13 +52,13 @@ export default function ScoresPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const p = new URLSearchParams({ hq1, hq2, academy });
+    const p = new URLSearchParams({ hq1, hq2, academy, admType, selYear: String(selYear) });
     const res = await fetch(`/api/admission?${p}`);
     const json = await res.json();
     setData(json);
     if (json.academyList) setAcademyList(json.academyList);
     setLoading(false);
-  }, [hq1, hq2, academy]);
+  }, [hq1, hq2, academy, admType, selYear]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -141,7 +142,14 @@ export default function ScoresPage() {
 
         {/* ── 전체 학원 KPI 카드 ── */}
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 10, color: T.textHint, marginBottom: 8, letterSpacing: "0.08em" }}>전체 학원 합계 (2026학년도)</div>
+          <div style={{ fontSize: 10, color: T.textHint, marginBottom: 8, letterSpacing: "0.08em" }}>
+            전체 학원 합계 ({selYear}학년도)
+            {selYear <= 2025 && selYear >= 2024 && (
+              <span style={{ marginLeft: 8, fontSize: 9, color: T.textMuted }}>
+                * 남학생 : 2024~2025학년도의 경우 남의대관 입결이 포함되어 있음
+              </span>
+            )}
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 8, marginBottom: 20 }}>
             {CATS.map(cat => (
               <div key={cat.key} style={{
@@ -189,8 +197,24 @@ export default function ScoresPage() {
               {filteredAcademies.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ fontSize: 9, color: T.textMuted }}>전형</span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {["전체","수시","정시"].map(t => (
+                <button key={t} onClick={() => setAdmType(t)} style={{
+                  padding: "5px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                  border: `0.5px solid ${admType === t ? T.yellow : T.border}`,
+                  background: admType === t ? "rgba(245,196,24,0.1)" : "transparent",
+                  color: admType === t ? T.yellow : T.textMuted,
+                  cursor: "pointer",
+                }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ fontSize: 10, color: T.textMuted, alignSelf: "center" }}>
-            * 2021~2025학년도는 추후 업데이트 예정
+            * 2021~2023학년도는 추후 업데이트 예정
           </div>
         </div>
 

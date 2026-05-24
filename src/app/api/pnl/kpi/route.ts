@@ -24,6 +24,9 @@ function eok(v: number): number {
 }
 function ratePct(a: number, b: number): number | null {
   if (!b) return null;
+  // 계획(b)이 음수일 때: 적자 감소=달성초과, 적자 증가=미달
+  // 예) 계획 -0.9, 실제 -1.2 => 75% (미달)
+  if (b < 0) return a !== 0 ? Math.round((b / a) * 100 * 10) / 10 : null;
   return Math.round((a / b) * 100 * 10) / 10;
 }
 function yoyPct(curr: number, prev: number): number | null {

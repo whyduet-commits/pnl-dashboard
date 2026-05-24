@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import FilterBar, { FilterState } from "@/components/dashboard/FilterBar";
 import NaverMap from "@/components/dashboard/NaverMap";
+import Sidebar from "@/components/dashboard/Sidebar";
 import { useTheme } from "@/lib/theme";
 import {
   ComposedChart, Area, Line,
@@ -11,18 +12,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const MENU = [
-  {icon:"⊞", label:"대시보드"},
-  {icon:"🏫",label:"학원 상세 분석", sub:[{icon:"📋",label:"월간 보고서"}]},
-  {icon:"👥",label:"재원생 분석", sub:[
-    {icon:"📊",label:"등록 추이(전체)"},
-    {icon:"📈",label:"등록 추이(학원별)"},
-    {icon:"🎯",label:"입결 현황"},
-  ]},
-  {icon:"🗺",label:"FloorEdit"},
-  {icon:"📊",label:"단과 판매 분석"},
-  {icon:"👨‍🏫",label:"개별 강사 현황"},
-];
 
 const CHART_CONFIGS_BASE = [
   { title:"매출",      accountId:1   },
@@ -38,7 +27,7 @@ function AiComment({ text }: { text:string }) {
   return (
     <div style={{ background:T.bgCard, border:`1px solid rgba(245,196,24,0.2)`, borderRadius:12, padding:"20px 22px" }}>
       <div style={{ marginBottom:14 }}>
-        <div style={{ fontSize:13, fontWeight:700, color:T.yellow }}>AI 분석 코멘트</div>
+        <div style={{ fontSize:13, fontWeight:700, color:T.textPri }}>AI 분석 코멘트</div>
         <div style={{ fontSize:10, color:T.textMuted }}>Claude Sonnet 4 분석</div>
       </div>
       <div style={{ fontSize:12, lineHeight:1.8, color:T.textPri }}>
@@ -227,16 +216,6 @@ export default function Dashboard() {
     checkAuth();
   },[]);
 
-  const handleLogout=async()=>{
-    const{data:{user}}=await supabase.auth.getUser();
-    if(user){
-      const{data:lastLog}=await supabase.from("access_logs").select("id,login_at").eq("user_id",user.id).is("logout_at",null).order("login_at",{ascending:false}).limit(1).single();
-      if(lastLog){const duration=Math.floor((Date.now()-new Date(lastLog.login_at).getTime())/1000);await supabase.from("access_logs").update({logout_at:new Date().toISOString(),duration_sec:duration}).eq("id",lastLog.id);}
-    }
-    await supabase.auth.signOut();router.push("/login");
-  };
-
-  const [activeMenu,setActiveMenu]=useState("대시보드");
   const [filters,setFilters]=useState<FilterState>({year:2026,scenario:"actual",hq1:"전체",hq2:"전체",orgId:1});
   const [kpi,setKpi]=useState<any>(null);
   const [kpiLoading,setKpiLoading]=useState(true);
@@ -343,42 +322,7 @@ export default function Dashboard() {
     <div style={{ display:"flex", height:"100vh", width:"100vw", fontFamily:"'SUIT','Pretendard','Noto Sans KR',sans-serif", background:T.bgBase, color:T.textPri, overflow:"hidden" }}>
 
       {/* 사이드바 */}
-      <aside style={{ width:200, flexShrink:0, background:T.bgSurface, display:"flex", flexDirection:"column", padding:"0 0 24px", borderRight:`1px solid ${T.border}` }}>
-        <div style={{ padding:"18px 18px 16px", borderBottom:`1px solid ${T.border}` }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer" }} onClick={()=>router.push("/")}>
-            
-            <div style={{ fontSize:12, fontWeight:700, color:T.textPri }}>손익 Dashboard</div>
-          </div>
-        </div>
-        <nav style={{ flex:1, padding:"12px 10px" }}>
-          {MENU.map(m=>(
-            <div key={m.label}>
-              <button onClick={()=>{setActiveMenu(m.label);if(m.label==="FloorEdit")router.push("/floor");if(m.label==="단과 판매 분석")router.push("/sales");if(m.label==="개별 강사 현황")router.push("/instructor");}} style={{ width:"100%", display:"flex", alignItems:"center", gap:9, padding:"8px 10px", borderRadius:9, marginBottom:1, background:activeMenu===m.label?`rgba(245,196,24,0.1)`:"transparent", color:activeMenu===m.label?T.yellow:T.textMuted, border:activeMenu===m.label?`1px solid rgba(245,196,24,0.2)`:"1px solid transparent", cursor:"pointer", fontSize:12, fontWeight:activeMenu===m.label?700:400, textAlign:"left", borderLeft:activeMenu===m.label?`2px solid ${T.yellow}`:"2px solid transparent" }}>
-                <span>{m.icon}</span>{m.label}
-              </button>
-              {(m as any).sub&&(
-                <div style={{ paddingLeft:10, marginBottom:2 }}>
-                  {(m as any).sub.map((s:any)=>(
-                    <button key={s.label} onClick={()=>{setActiveMenu(s.label);if(s.label==="등록 추이(전체)")router.push("/students/enrollment/all");if(s.label==="등록 추이(학원별)")router.push("/students/enrollment");if(s.label==="입결 현황")router.push("/students/scores");if(s.label==="월간 보고서")router.push("/report");}} style={{ width:"100%", display:"flex", alignItems:"center", gap:6, padding:"6px 10px", borderRadius:8, marginBottom:1, background:activeMenu===s.label?`rgba(245,196,24,0.08)`:"transparent", color:activeMenu===s.label?T.yellow:T.textMuted, border:"1px solid transparent", cursor:"pointer", fontSize:11, fontWeight:activeMenu===s.label?700:400, textAlign:"left" }}>
-                      <span style={{ fontSize:9, color:activeMenu===s.label?T.yellow:T.textHint }}>└</span><span>{s.icon}</span>{s.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-          <div style={{ borderTop:`1px solid ${T.border}`, marginTop:8, paddingTop:8 }}>
-            <button onClick={()=>router.push("/admin")} style={{ width:"100%", display:"flex", alignItems:"center", gap:9, padding:"8px 10px", borderRadius:9, marginBottom:1, background:"transparent", color:T.textMuted, border:"1px solid transparent", cursor:"pointer", fontSize:12, textAlign:"left" }}><span>🔐</span>접속 로그</button>
-            <button onClick={handleLogout} style={{ width:"100%", display:"flex", alignItems:"center", gap:9, padding:"8px 10px", borderRadius:9, background:"transparent", color:T.textMuted, border:"1px solid transparent", cursor:"pointer", fontSize:12, textAlign:"left" }}><span>🚪</span>로그아웃</button>
-          </div>
-        </nav>
-        <div style={{ padding:"12px 14px", borderTop:`1px solid ${T.border}` }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ width:30, height:30, background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>👤</div>
-            <div><div style={{ fontSize:11, fontWeight:600, color:T.textPri }}>홍길동 관리자</div><div style={{ fontSize:9, color:T.textMuted }}>중점본부</div></div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar />
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <FilterBar filters={filters} onChange={setFilters} updatedAt="2026.05.07 10:30" />
@@ -399,11 +343,11 @@ export default function Dashboard() {
           <div style={{ marginBottom:12 }}>
             {!aiGenerated?(
               <div style={{ background:T.bgCard, border:`1px solid rgba(245,196,24,0.15)`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
-                <button onClick={fetchAiComment} disabled={aiLoading} style={{ flexShrink:0, padding:"7px 18px", borderRadius:8, border:"none", background:aiLoading?`rgba(245,196,24,0.2)`:T.yellow, color:aiLoading?"rgba(255,255,255,0.5)":"#000", fontSize:12, fontWeight:700, cursor:aiLoading?"not-allowed":"pointer", transition:"all 0.15s", whiteSpace:"nowrap" }}>
+                <button onClick={fetchAiComment} disabled={aiLoading} style={{ flexShrink:0, padding:"7px 18px", borderRadius:8, border:"none", background:aiLoading?`rgba(245,196,24,0.2)`:T.yellow, color:aiLoading?"rgba(255,255,255,0.5)":"#ffffff", fontSize:12, fontWeight:700, cursor:aiLoading?"not-allowed":"pointer", transition:"all 0.15s", whiteSpace:"nowrap" }}>
                   {aiLoading?"분석 중...":"AI 분석 시작"}
                 </button>
                 <div>
-                  <div style={{ fontSize:13, fontWeight:700, color:T.textPri }}>AI 분석 코멘트</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:T.yellow }}>AI 분석 코멘트</div>
                   <div style={{ fontSize:10, color:T.textMuted }}>현재 조회 조건 기준으로 분석합니다</div>
                 </div>
               </div>
