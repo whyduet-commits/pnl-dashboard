@@ -70,9 +70,9 @@ export default function InstructorProfilePage() {
         if (data.length > 0) setSelected(data[0]);
       }
 
-      // 과목 목록: sales_daily에서 가져오기
+      // 과목 목록: instructor_profiles에서 직접 가져오기
       const { data: subjectData } = await supabase
-        .from("sales_daily")
+        .from("instructor_profiles")
         .select("subject");
       const subjects = [...new Set((subjectData ?? []).map((r: any) => r.subject).filter(Boolean))].sort() as string[];
       setSubjectOpts(subjects);
@@ -90,7 +90,11 @@ export default function InstructorProfilePage() {
   // 필터링
   useEffect(() => {
     let result = [...profiles];
-    if (filterSubj !== "전체") result = result.filter(p => p.subjects?.includes(filterSubj) || p.subject === filterSubj);
+    if (filterSubj !== "전체") result = result.filter(p => {
+      const subj = p.subjects || p.subject || "";
+      // 콤마 구분 과목 중 정확히 일치하는 것
+      return subj.split(/[,，、]/).map((s: string) => s.trim()).includes(filterSubj) || subj.trim() === filterSubj;
+    });
     if (filterStatus !== "전체") result = result.filter(p => p.status === filterStatus);
     if (searchQ.trim()) {
       const q = searchQ.trim().toLowerCase();
