@@ -1,72 +1,77 @@
 // src/app/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { createClient as createAdmin } from "@supabase/supabase-js";
-
-const adminClient = createAdmin(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
-  const code  = searchParams.get("code");
+  const code = searchParams.get("code");
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=no_code`);
   }
 
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll()         { return cookieStore.getAll(); },
-        setAll(list)     { list.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); },
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  // 응답 객체를 먼저 생성 (쿠키 설정용)
+  const res = NextResponse.redirect(`${origin}/`);
+
+  // PKCE 코드 검증을 위해 요청 쿠키를 읽고 응답 쿠키에 저장하는 클라이언트
+  const supabase = createServerClient(supabaseUrl, anonKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
       },
+      setAll(cookieList) {
+        cookieList.forEach(({ name, value, options }) => {
+          res.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  try {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error || !data?.user || !data?.session) {
+      console.error("[callback] exchangeCodeForSession 실패:", error?.message);
+      return NextResponse.redirect(`${origin}/login?error=auth_failed`);
     }
-  );
 
-  // code → session 교환
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    const { user } = data;
 
-  if (error || !data.user) {
-    console.error("exchangeCodeForSession 오류:", error);
+    // ── 승인 계정 확인 ──────────────────────────────────────
+    const admin = createSupabaseClient(supabaseUrl, serviceKey);
+    const { data: allowed } = await admin
+      .from("allowed_users")
+      .select("email")
+      .eq("email", user.email)
+      .single();
+
+    if (!allowed) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(`${origin}/login?error=not_allowed`);
+    }
+
+    // ── 접속 로그 (중복 방지 + IP 수집) ────────────────────
+    try {
+      await fetch(`${origin}/api/auth/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-forwarded-for": req.headers.get("x-forwarded-for") ?? "" },
+        body: JSON.stringify({
+          user_id: user.id,
+          email:   user.email ?? "",
+          name:    user.user_metadata?.full_name ?? null,
+        }),
+      });
+    } catch { /* 로그 실패가 로그인을 막지 않도록 */ }
+
+    return res;
+
+  } catch (e: any) {
+    console.error("[callback] 처리 오류:", e?.message ?? e);
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
-
-  const user = data.user;
-
-  // ── 승인 계정 확인 ──────────────────────────────────────
-  const { data: allowed } = await adminClient
-    .from("allowed_users")
-    .select("email")
-    .eq("email", user.email)
-    .single();
-
-  if (!allowed) {
-    // signOut 없이 바로 리디렉션 (쿠키 충돌 방지)
-    // 클라이언트에서 not_allowed 감지 후 세션 제거
-    const res = NextResponse.redirect(`${origin}/login?error=not_allowed`);
-    // 세션 쿠키 강제 삭제
-    res.cookies.set("sb-access-token", "", { maxAge: 0 });
-    res.cookies.set("sb-refresh-token", "", { maxAge: 0 });
-    return res;
-  }
-
-  // ── 접속 로그 ────────────────────────────────────────────
-  try {
-    await adminClient.from("access_logs").insert({
-      user_id:  user.id,
-      email:    user.email,
-      name:     user.user_metadata?.full_name ?? null,
-      login_at: new Date().toISOString(),
-    });
-  } catch {
-    console.warn("access_logs insert 실패");
-  }
-
-  return NextResponse.redirect(`${origin}/`);
 }

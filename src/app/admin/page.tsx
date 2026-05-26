@@ -105,7 +105,7 @@ export default function AdminPage() {
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                 <thead>
                   <tr style={{ borderBottom:"2px solid #EDE8D8", background:"#FDFBF4" }}>
-                    {["#","이메일","이름","로그인 시각","로그아웃 시각","체류시간","상태"].map(h => (
+                    {["#","이메일","이름","IP","로그인 시각","로그아웃 시각","체류시간","상태"].map(h => (
                       <th key={h} style={{ padding:"10px 12px", textAlign:"left", color:"#6b7280", fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -122,6 +122,7 @@ export default function AdminPage() {
                       <td style={{ padding:"10px 12px", color:"#9ca3af" }}>{i + 1}</td>
                       <td style={{ padding:"10px 12px", fontWeight:600 }}>{log.email}</td>
                       <td style={{ padding:"10px 12px", color:"#6b7280" }}>{log.name ?? "—"}</td>
+                      <td style={{ padding:"10px 12px", color:"#6b7280", fontFamily:"monospace", fontSize:12 }}>{log.ip_address ?? "—"}</td>
                       <td style={{ padding:"10px 12px", whiteSpace:"nowrap" }}>{formatDate(log.login_at)}</td>
                       <td style={{ padding:"10px 12px", whiteSpace:"nowrap", color:"#6b7280" }}>{formatDate(log.logout_at)}</td>
                       <td style={{ padding:"10px 12px", whiteSpace:"nowrap" }}>{formatDuration(log.duration_sec)}</td>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
@@ -10,20 +10,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading,  setLoading]  = useState(false);
   const [gLoading, setGLoading] = useState(false);
+  const [error,    setError]    = useState("");
 
-  // URL 에러 파라미터 처리 (Google 콜백에서 넘어온 경우)
-  const searchParams = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search) : null;
-  const urlError = searchParams?.get("error");
-  const initError = urlError === "not_allowed"
-    ? "승인되지 않은 계정입니다. 관리자에게 문의하세요."
-    : urlError === "auth_failed" ? "Google 인증에 실패했습니다." : "";
-  const [error, setError] = useState(initError);
-
-  // 미승인 계정인 경우 잔여 세션 제거
+  // URL 에러 파라미터 처리 — useEffect로 클라이언트에서만 실행
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlError = params.get("error");
     if (urlError === "not_allowed") {
+      setError("승인되지 않은 계정입니다. 관리자에게 문의하세요.");
       supabase.auth.signOut().catch(() => {});
+    } else if (urlError === "auth_failed") {
+      setError("Google 인증에 실패했습니다.");
     }
   }, []);
 
@@ -41,17 +38,14 @@ export default function LoginPage() {
       return false;
     }
 
-    // 접속 로그
+    // 접속 로그 (중복 방지 + IP 수집)
     try {
-      await supabase.from("access_logs").insert({
-        user_id:  userId,
-        email:    userEmail,
-        name:     userName ?? null,
-        login_at: new Date().toISOString(),
+      await fetch("/api/auth/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, email: userEmail, name: userName }),
       });
-    } catch {
-      console.warn("access_logs insert 실패");
-    }
+    } catch { console.warn("access_logs 실패"); }
     return true;
   };
 
