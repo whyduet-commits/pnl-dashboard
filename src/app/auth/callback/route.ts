@@ -1,7 +1,7 @@
 // src/app/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
@@ -14,18 +14,20 @@ export async function GET(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const admin       = createClient(supabaseUrl, serviceKey);
 
-  // 응답 객체를 먼저 생성 (쿠키 설정용)
+  // 응답 객체 미리 생성 (쿠키 설정용)
   const res = NextResponse.redirect(`${origin}/`);
 
-  // PKCE 코드 검증을 위해 요청 쿠키를 읽고 응답 쿠키에 저장하는 클라이언트
+  // createServerClient: 요청 쿠키에서 code_verifier 자동으로 읽음
   const supabase = createServerClient(supabaseUrl, anonKey, {
     cookies: {
       getAll() {
         return req.cookies.getAll();
       },
-      setAll(cookieList) {
-        cookieList.forEach(({ name, value, options }) => {
+      setAll(list) {
+        list.forEach(({ name, value, options }) => {
+          req.cookies.set(name, value);
           res.cookies.set(name, value, options);
         });
       },
@@ -35,52 +37,48 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (error || !data?.user || !data?.session) {
-      console.error("[callback] exchangeCodeForSession 실패:", error?.message);
+    if (error || !data?.user) {
+      console.error("[callback] 실패:", error?.message);
       return NextResponse.redirect(`${origin}/login?error=auth_failed`);
     }
 
     const { user } = data;
+    console.log("[callback] 성공:", user.email);
 
     // ── 승인 계정 확인 ──────────────────────────────────────
-    const admin = createSupabaseClient(supabaseUrl, serviceKey);
     const { data: allowed } = await admin
-      .from("allowed_users")
-      .select("email")
-      .eq("email", user.email)
-      .single();
+      .from("allowed_users").select("email")
+      .eq("email", user.email).single();
 
     if (!allowed) {
       await supabase.auth.signOut();
       return NextResponse.redirect(`${origin}/login?error=not_allowed`);
     }
 
-    // ── profiles 자동 생성 (Google 로그인 최초 시) ──────────
+    // ── profiles 자동 생성 ───────────────────────────────────
     const { data: profile } = await admin
       .from("profiles").select("name").eq("id", user.id).maybeSingle();
 
     if (!profile) {
-      await admin.from("profiles").insert({
-        id:   user.id,
-        name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자",
-        role: "user",
-      }).catch(() => {});
+      try {
+        await admin.from("profiles").insert({
+          id:   user.id,
+          name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자",
+          role: "user",
+        });
+      } catch {}
     }
 
-    const userName = profile?.name ?? user.user_metadata?.full_name ?? null;
-
-    // ── 접속 로그 (중복 방지 + IP 수집) ────────────────────
+    // ── 접속 로그 ────────────────────────────────────────────
     try {
-      await fetch(`${origin}/api/auth/log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-forwarded-for": req.headers.get("x-forwarded-for") ?? "" },
-        body: JSON.stringify({
-          user_id: user.id,
-          email:   user.email ?? "",
-          name:    userName,
-        }),
+      await admin.from("access_logs").insert({
+        user_id:    user.id,
+        email:      user.email ?? "",
+        name:       profile?.name ?? user.user_metadata?.full_name ?? null,
+        login_at:   new Date().toISOString(),
+        ip_address: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown",
       });
-    } catch { /* 로그 실패가 로그인을 막지 않도록 */ }
+    } catch {}
 
     return res;
 

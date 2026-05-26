@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
@@ -58,6 +59,20 @@ export default function Sidebar() {
   const pathname = usePathname();
   const supabase = createClient();
   const { T }    = useTheme();
+  const [userInfo, setUserInfo] = React.useState<{ name: string; email: string } | null>(null);
+
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from("profiles").select("name").eq("id", user.id).maybeSingle()
+        .then(({ data }) => {
+          setUserInfo({
+            name:  data?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자",
+            email: user.email ?? "",
+          });
+        });
+    });
+  }, []);
 
   const handleLogout = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -173,10 +188,14 @@ export default function Sidebar() {
             👤
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: T.textPri }}>
-              관리자 황정우
-            </div>
-            <div style={{ fontSize: 9, color: T.textMuted }}>중점본부</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: T.textPri,
+  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+  {userInfo?.name ?? "로딩 중..."}
+</div>
+<div style={{ fontSize: 9, color: T.textMuted,
+  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+  {userInfo?.email ?? ""}
+</div>
           </div>
         </div>
       </div>
