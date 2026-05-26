@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { useTheme } from "@/lib/theme";
@@ -13,12 +14,9 @@ const MENU = [
     { icon: "📈", label: "등록 추이(학원별)", path: "/students/enrollment" },
     { icon: "🎯", label: "입결 현황",         path: "/students/scores" },
   ]},
-  { icon: "📊",   label: "단과 판매 분석", path: "/sales"      },
-  { icon: "👨‍🏫", label: "강사 현황", path: null, sub: [
-    { icon: "👤", label: "강사 프로필 조회", path: "/instructor/profile" },
-    { icon: "📊", label: "단과 강사 판매 현황", path: "/instructor" },
-  ]},
   { icon: "🗺",   label: "FloorEdit",       path: "/floor"      },
+  { icon: "📊",   label: "단과 판매 분석", path: "/sales"      },
+  { icon: "👨‍🏫", label: "개별 강사 현황", path: "/instructor" },
 ];
 
 function NavBtn({ icon, label, active, onClick, sub = false, T }: {
@@ -58,6 +56,22 @@ export default function Sidebar() {
   const pathname = usePathname();
   const supabase = createClient();
   const { T }    = useTheme();
+  const [userInfo, setUserInfo] = React.useState<{ name: string; email: string } | null>(null);
+
+  // 로그인 유저 정보 조회
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      // profiles 테이블에서 이름 조회, 없으면 이메일 앞부분 사용
+      supabase.from("profiles").select("name").eq("id", user.id).single()
+        .then(({ data }) => {
+          setUserInfo({
+            name:  data?.name ?? user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자",
+            email: user.email ?? "",
+          });
+        });
+    });
+  }, []);
 
   const handleLogout = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -85,8 +99,8 @@ export default function Sidebar() {
   const isActive = (path: string | null): boolean => {
     if (!path) return false;
     if (path === "/") return pathname === "/";
-    // 정확히 일치하는 경우만 active (startsWith 제거로 중복 음영 방지)
-    return pathname === path;
+    // 정확히 일치하거나, path + "/" 로 시작하는 경우만 active
+    return pathname === path || pathname.startsWith(path + "/");
   };
 
   return (
@@ -107,8 +121,12 @@ export default function Sidebar() {
         }}
         onClick={() => router.push("/")}
       >
+        <div style={{
+          width: 26, height: 26, background: "#F5C418",
+          borderRadius: 6, flexShrink: 0,
+        }} />
         <div style={{ fontSize: 12, fontWeight: 700, color: T.textPri }}>
-          GROWTH MONITOR
+          손익 Dashboard
         </div>
       </div>
 
@@ -164,19 +182,21 @@ export default function Sidebar() {
       <div style={{ padding: "12px 14px", borderTop: `1px solid ${T.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{
-            width: 30, height: 30,
-            background: T.bgCard,
-            border: `1px solid ${T.border}`,
-            borderRadius: "50%",
+            width: 30, height: 30, background: T.bgCard,
+            border: `1px solid ${T.border}`, borderRadius: "50%",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
           }}>
             👤
           </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: T.textPri }}>
-              관리자 황정우
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: T.textPri,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {userInfo?.name ?? "로딩 중..."}
             </div>
-            <div style={{ fontSize: 9, color: T.textMuted }}>중점본부</div>
+            <div style={{ fontSize: 9, color: T.textMuted,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {userInfo?.email ?? ""}
+            </div>
           </div>
         </div>
       </div>
