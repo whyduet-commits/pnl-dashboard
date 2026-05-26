@@ -115,10 +115,11 @@ export default function LoginPage() {
 
       {/* 로그인 폼 */}
       <div style={{
-        position: "relative", zIndex: 10, width: 300, marginLeft: 80,
+        position: "relative", zIndex: 10, width: 400, marginLeft: 200, marginTop: -200,
+
         background: "rgba(255,255,255,0.07)",
         border: "1px solid rgba(255,255,255,0.14)",
-        borderRadius: 20, padding: "36px 30px",
+        borderRadius: 20, padding: "48px 40px",
         display: "flex", flexDirection: "column",
       }}>
         <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff",
