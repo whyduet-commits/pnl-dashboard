@@ -85,10 +85,11 @@ export default function LoginPage() {
     setGLoading(true);
     setError("");
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${siteUrl}/auth/callback`,
       },
     });
 
@@ -115,11 +116,10 @@ export default function LoginPage() {
 
       {/* 로그인 폼 */}
       <div style={{
-        position: "relative", zIndex: 10, width: 400, marginLeft: 200, marginTop: -200,
-
+        position: "relative", zIndex: 10, width: 300, marginLeft: 80,
         background: "rgba(255,255,255,0.07)",
         border: "1px solid rgba(255,255,255,0.14)",
-        borderRadius: 20, padding: "48px 40px",
+        borderRadius: 20, padding: "36px 30px",
         display: "flex", flexDirection: "column",
       }}>
         <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff",
