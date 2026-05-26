@@ -20,6 +20,13 @@ export default function LoginPage() {
     : urlError === "auth_failed" ? "Google 인증에 실패했습니다." : "";
   const [error, setError] = useState(initError);
 
+  // 미승인 계정인 경우 잔여 세션 제거
+  useEffect(() => {
+    if (urlError === "not_allowed") {
+      supabase.auth.signOut().catch(() => {});
+    }
+  }, []);
+
   // ── 승인 계정 확인 공통 함수 ─────────────────────────────
   const checkAllowed = async (userId: string, userEmail: string, userName: string | null) => {
     const { data: allowed } = await supabase

@@ -47,8 +47,13 @@ export async function GET(req: NextRequest) {
     .single();
 
   if (!allowed) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/login?error=not_allowed`);
+    // signOut 없이 바로 리디렉션 (쿠키 충돌 방지)
+    // 클라이언트에서 not_allowed 감지 후 세션 제거
+    const res = NextResponse.redirect(`${origin}/login?error=not_allowed`);
+    // 세션 쿠키 강제 삭제
+    res.cookies.set("sb-access-token", "", { maxAge: 0 });
+    res.cookies.set("sb-refresh-token", "", { maxAge: 0 });
+    return res;
   }
 
   // ── 접속 로그 ────────────────────────────────────────────
