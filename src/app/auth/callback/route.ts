@@ -55,6 +55,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=not_allowed`);
     }
 
+    // ── profiles 자동 생성 (Google 로그인 최초 시) ──────────
+    const { data: profile } = await admin
+      .from("profiles").select("name").eq("id", user.id).maybeSingle();
+
+    if (!profile) {
+      await admin.from("profiles").insert({
+        id:   user.id,
+        name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "사용자",
+        role: "user",
+      }).catch(() => {});
+    }
+
+    const userName = profile?.name ?? user.user_metadata?.full_name ?? null;
+
     // ── 접속 로그 (중복 방지 + IP 수집) ────────────────────
     try {
       await fetch(`${origin}/api/auth/log`, {
@@ -63,7 +77,7 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({
           user_id: user.id,
           email:   user.email ?? "",
-          name:    user.user_metadata?.full_name ?? null,
+          name:    userName,
         }),
       });
     } catch { /* 로그 실패가 로그인을 막지 않도록 */ }

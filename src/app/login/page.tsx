@@ -40,10 +40,17 @@ export default function LoginPage() {
 
     // 접속 로그 (중복 방지 + IP 수집)
     try {
+      // profiles 조회 실패해도 로그는 기록
+      const { data: profile } = await supabase
+        .from("profiles").select("name").eq("id", userId).maybeSingle();
       await fetch("/api/auth/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, email: userEmail, name: userName }),
+        body: JSON.stringify({
+          user_id: userId,
+          email:   userEmail,
+          name:    profile?.name ?? userName ?? userEmail.split("@")[0],
+        }),
       });
     } catch { console.warn("access_logs 실패"); }
     return true;
