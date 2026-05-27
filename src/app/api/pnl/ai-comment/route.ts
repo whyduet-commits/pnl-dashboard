@@ -18,20 +18,20 @@ const ORG_MAP: Record<string, number[]> = {
 
 // 손익 상세 항목 (account_id → 계정명)
 const ACCOUNT_LABELS: Record<number, string> = {
-  1:   "매출",
-  2:   "단과매출",
-  3:   "종합매출",
-  4:   "바자관매출",
-  5:   "교재/모의고사매출",
-  128: "매출원가",
-  130: "단과매출원가",
-  131: "종합매출원가",
-  200: "판관비",
-  201: "급여",
-  202: "감가상각비",
-  203: "지급임차료",
-  204: "광고선전비",
-  205: "소모품비",
+  1:   "매출(사업부)",
+  5:   "단과매출",
+  6:   "종합매출",
+  7:   "특강매출",
+  9:   "교재매출",
+  10:  "모의고사매출",
+  13:  "바자관매출",
+  105: "매출원가",
+  106: "단과매출원가",
+  107: "종합매출원가",
+  128: "판매관리비",
+  129: "급여",
+  130: "상여금",
+  131: "잡급",
   285: "영업이익Ⅱ",
 };
 const ALL_ACCOUNT_IDS = Object.keys(ACCOUNT_LABELS).map(Number);
@@ -85,14 +85,14 @@ export async function GET(req: NextRequest) {
     // 핵심 지표
     const revA  = sum(1,   labelA);  const revP  = sum(1,   labelP);  const revPr = sum(1,   labelPr);
     const opA   = sum(285, labelA);  const opP   = sum(285, labelP);  const opPr  = sum(285, labelPr);
-    const sgaA  = sum(200, labelA);  const sgaPr = sum(200, labelPr);
-    const cogA  = sum(128, labelA);  const cogPr = sum(128, labelPr);
+    const sgaA  = sum(128, labelA);  const sgaPr = sum(128, labelPr);
+const cogA  = sum(105, labelA);  const cogPr = sum(105, labelPr);
 
     const opMarginA  = revA  ? Math.round(opA  / revA  * 1000) / 10 : 0;
     const opMarginPr = revPr ? Math.round(opPr / revPr * 1000) / 10 : 0;
 
     // 판관비 세부 항목 YoY 변화 (TOP3 증감)
-    const sgaItems = [201,202,203,204,205].map(id => {
+    const sgaItems = [129,130,131].map(id => {
       const curr = eok(sum(id, labelA));
       const prev = eok(sum(id, labelPr));
       const diff = Math.round((curr - prev) * 10) / 10;
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
     // 매출 세부 항목 YoY
-    const revItems = [2,3,4,5].map(id => {
+    const revItems = [5,6,7,9,10,13].map(id => {
       const curr = eok(sum(id, labelA));
       const prev = eok(sum(id, labelPr));
       const diff = Math.round((curr - prev) * 10) / 10;
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
     }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 
     // 매출원가 세부 항목 YoY
-    const cogItems = [130,131].map(id => {
+    const cogItems = [106,107].map(id => {
       const curr = eok(sum(id, labelA));
       const prev = eok(sum(id, labelPr));
       const diff = Math.round((curr - prev) * 10) / 10;
@@ -117,6 +117,8 @@ export async function GET(req: NextRequest) {
 
     const prompt = `
 당신은 교육 학원 경영 전문 분석가입니다. 아래 ${year}년 ${orgLabel} 손익 데이터를 분석하고 경영진을 위한 상세 분석 코멘트를 작성해주세요.
+
+※ 주의: ${year === 2026 ? `2026년은 4월까지 실적, 5~12월은 추정치입니다. 반드시 "추정" 또는 "예상" 표현을 사용하고 과거형(~했습니다, ~달성했습니다) 사용 금지. "~될 것으로 보입니다", "~예상됩니다" 형태로 작성하세요.` : `${year}년은 확정 실적입니다.`}
 
 [핵심 손익 지표]
 - 매출: ${eok(revA)}억원 (전년 ${eok(revPr)}억원, YoY ${yoyPct(revA, revPr)}%, 계획대비 ${ratePct(revA, revP)}%)
