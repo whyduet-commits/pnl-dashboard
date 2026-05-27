@@ -25,7 +25,7 @@ function AiComment({ text }: { text:string }) {
   if (!text) return null;
   const lines = text.split("\n");
   return (
-    <div style={{ background:T.bgCard, border:`1px solid rgba(245,196,24,0.2)`, borderRadius:12, padding:"20px 22px" }}>
+    <div style={{ background:`rgba(245,196,24,0.06)`, border:`1px solid rgba(245,196,24,0.35)`, borderRadius:12, padding:"20px 22px", boxShadow:`0 2px 12px rgba(245,196,24,0.10)` }}>
       <div style={{ marginBottom:14 }}>
         <div style={{ fontSize:13, fontWeight:700, color:T.textPri }}>AI 분석 코멘트</div>
         <div style={{ fontSize:10, color:T.textMuted }}>Claude Sonnet 4 분석</div>
@@ -342,7 +342,7 @@ export default function Dashboard() {
           {/* AI 분석 */}
           <div style={{ marginBottom:12 }}>
             {!aiGenerated?(
-              <div style={{ background:T.bgCard, border:`1px solid rgba(245,196,24,0.15)`, borderRadius:10, padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ background:`rgba(245,196,24,0.06)`, border:`1px solid rgba(245,196,24,0.35)`, borderRadius:10, padding:"20px 24px", minHeight:80, boxShadow:`0 2px 12px rgba(245,196,24,0.10)`, display:"flex", alignItems:"center", gap:14 }}>
                 <button onClick={fetchAiComment} disabled={aiLoading} style={{ flexShrink:0, padding:"7px 18px", borderRadius:8, border:"none", background:aiLoading?`rgba(245,196,24,0.2)`:T.yellow, color:aiLoading?"rgba(255,255,255,0.5)":"#ffffff", fontSize:12, fontWeight:700, cursor:aiLoading?"not-allowed":"pointer", transition:"all 0.15s", whiteSpace:"nowrap" }}>
                   {aiLoading?"분석 중...":"AI 분석 시작"}
                 </button>

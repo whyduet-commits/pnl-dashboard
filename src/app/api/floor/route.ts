@@ -10,7 +10,7 @@ const supabaseAdmin = createSupabaseClient(
 const BUCKET = "floor-plans";
 
 const ORG_FILES: Record<number, string> = {
-  2:  "gangnам.pdf",
+  2:  "gangnam.pdf",
   3:  "mokdong.pdf",
   4:  "bundang.pdf",
   5:  "daegu.pdf",

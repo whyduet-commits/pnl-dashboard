@@ -15,6 +15,27 @@ const ORG_MAP: Record<string, number[]> = {
   "시내":    [2,3,4,5,6],
   "기숙":    [7,8,9,10],
 };
+
+// 손익 상세 항목 (account_id → 계정명)
+const ACCOUNT_LABELS: Record<number, string> = {
+  1:   "매출",
+  2:   "단과매출",
+  3:   "종합매출",
+  4:   "바자관매출",
+  5:   "교재/모의고사매출",
+  128: "매출원가",
+  130: "단과매출원가",
+  131: "종합매출원가",
+  200: "판관비",
+  201: "급여",
+  202: "감가상각비",
+  203: "지급임차료",
+  204: "광고선전비",
+  205: "소모품비",
+  285: "영업이익Ⅱ",
+};
+const ALL_ACCOUNT_IDS = Object.keys(ACCOUNT_LABELS).map(Number);
+
 function eok(v: number) { return Math.round(v / 1e8 * 10) / 10; }
 function yoyPct(c: number, p: number) {
   if (!p) return null;
@@ -43,13 +64,17 @@ export async function GET(req: NextRequest) {
   const labelP  = `${year} 사업계획`;
   const labelPr = `${year - 1}년`;
 
+  const orgLabel = orgId !== 1 ? String(orgId)
+    : hq2 !== "전체" ? hq2
+    : hq1 !== "전체" ? hq1 : "전체";
+
   try {
-    // Supabase 직접 조회 (localhost fetch 없음)
+    // 전체 손익 항목 조회
     const { data } = await supabaseAdmin
       .from("pnl_fact_annual_total")
       .select("org_id, account_id, scenario_label, value")
       .in("org_id", orgIds)
-      .in("account_id", [1, 285])
+      .in("account_id", ALL_ACCOUNT_IDS)
       .in("scenario_label", [labelA, labelP, labelPr]);
 
     const sum = (accountId: number, label: string) =>
@@ -57,40 +82,70 @@ export async function GET(req: NextRequest) {
         .filter((r: any) => r.account_id === accountId && r.scenario_label === label)
         .reduce((acc: number, r: any) => acc + Number(r.value || 0), 0);
 
-    const revA  = sum(1,   labelA);
-    const revP  = sum(1,   labelP);
-    const revPr = sum(1,   labelPr);
-    const opA   = sum(285, labelA);
-    const opP   = sum(285, labelP);
-    const opPr  = sum(285, labelPr);
+    // 핵심 지표
+    const revA  = sum(1,   labelA);  const revP  = sum(1,   labelP);  const revPr = sum(1,   labelPr);
+    const opA   = sum(285, labelA);  const opP   = sum(285, labelP);  const opPr  = sum(285, labelPr);
+    const sgaA  = sum(200, labelA);  const sgaPr = sum(200, labelPr);
+    const cogA  = sum(128, labelA);  const cogPr = sum(128, labelPr);
 
     const opMarginA  = revA  ? Math.round(opA  / revA  * 1000) / 10 : 0;
     const opMarginPr = revPr ? Math.round(opPr / revPr * 1000) / 10 : 0;
 
-    const orgLabel = orgId !== 1 ? String(orgId)
-      : hq2 !== "전체" ? hq2
-      : hq1 !== "전체" ? hq1 : "전체";
+    // 판관비 세부 항목 YoY 변화 (TOP3 증감)
+    const sgaItems = [201,202,203,204,205].map(id => {
+      const curr = eok(sum(id, labelA));
+      const prev = eok(sum(id, labelPr));
+      const diff = Math.round((curr - prev) * 10) / 10;
+      return { name: ACCOUNT_LABELS[id], curr, prev, diff };
+    }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+    // 매출 세부 항목 YoY
+    const revItems = [2,3,4,5].map(id => {
+      const curr = eok(sum(id, labelA));
+      const prev = eok(sum(id, labelPr));
+      const diff = Math.round((curr - prev) * 10) / 10;
+      return { name: ACCOUNT_LABELS[id], curr, prev, diff };
+    }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+
+    // 매출원가 세부 항목 YoY
+    const cogItems = [130,131].map(id => {
+      const curr = eok(sum(id, labelA));
+      const prev = eok(sum(id, labelPr));
+      const diff = Math.round((curr - prev) * 10) / 10;
+      return { name: ACCOUNT_LABELS[id], curr, prev, diff };
+    });
 
     const prompt = `
-당신은 교육 학원 경영 전문 분석가입니다. 아래 ${year}년 ${orgLabel} 연간 손익 데이터를 분석하고 경영진을 위한 분석 코멘트를 작성해주세요.
+당신은 교육 학원 경영 전문 분석가입니다. 아래 ${year}년 ${orgLabel} 손익 데이터를 분석하고 경영진을 위한 상세 분석 코멘트를 작성해주세요.
 
-[${year}년 연간 실적]
-- 매출: ${eok(revA)}억원 (전년 ${eok(revPr)}억원, YoY ${yoyPct(revA, revPr)}%)
+[핵심 손익 지표]
+- 매출: ${eok(revA)}억원 (전년 ${eok(revPr)}억원, YoY ${yoyPct(revA, revPr)}%, 계획대비 ${ratePct(revA, revP)}%)
+- 매출원가: ${eok(cogA)}억원 (전년 ${eok(cogPr)}억원, YoY ${yoyPct(cogA, cogPr)}%)
+- 판관비: ${eok(sgaA)}억원 (전년 ${eok(sgaPr)}억원, YoY ${yoyPct(sgaA, sgaPr)}%)
 - 영업이익Ⅱ: ${eok(opA)}억원 (전년 ${eok(opPr)}억원, YoY ${yoyPct(opA, opPr)}%)
 - 영업이익률: ${opMarginA}% (전년 ${opMarginPr}%)
-- 매출 계획 달성률: ${ratePct(revA, revP)}%
 - 영업이익 계획 달성률: ${ratePct(opA, opP)}%
 
-다음 형식으로 간결하게 작성해주세요:
+[매출 세부 항목 TOP3 변화]
+${revItems.slice(0,3).map(i => `- ${i.name}: ${i.curr}억원 (전년 ${i.prev}억원, ${i.diff >= 0 ? '+' : ''}${i.diff}억원)`).join('\n')}
+
+[판관비 세부 항목 TOP3 변화 (절대값 기준)]
+${sgaItems.slice(0,3).map(i => `- ${i.name}: ${i.curr}억원 (전년 ${i.prev}억원, ${i.diff >= 0 ? '+' : ''}${i.diff}억원)`).join('\n')}
+
+[매출원가 세부 항목]
+${cogItems.map(i => `- ${i.name}: ${i.curr}억원 (전년 ${i.prev}억원, ${i.diff >= 0 ? '+' : ''}${i.diff}억원)`).join('\n')}
+
+다음 형식으로 작성해주세요:
 1. **종합 평가** (2~3문장)
-2. **긍정 지표** (bullet 2~3개)
-3. **주의 지표** (bullet 2~3개)
-4. **향후 제언** (2~3문장)
+2. **긍정 지표** (bullet 2~3개, 구체적 수치 포함)
+3. **주의 지표** (bullet 2~3개, 구체적 수치 포함)
+4. **세부 항목 분석** (판관비/매출원가 증감 TOP 항목 중심으로 2~3문장)
+5. **향후 제언** (2~3문장)
 `;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 1000,
+      max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     });
 

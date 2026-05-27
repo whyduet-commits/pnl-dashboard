@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/lib/theme";
 
 export const metadata: Metadata = {
-  title: "손익 Dashboard",
+  title: "RUSSEL GROWTH MONITOR",
   description: "메가스터디 손익 분석 대시보드",
 };
 

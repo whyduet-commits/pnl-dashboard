@@ -35,17 +35,23 @@ function MetricCard({ title, actual, prev, yoy, unit="억원", planVal, achievem
     <div style={{ background:T.bgCard, borderRadius:10, padding:"13px 15px", border:`0.5px solid ${highlight?"rgba(28,28,28,0.25)":T.border}`, borderTop:`2px solid ${highlight?T.textPri:"#888"}`, display:"flex", flexDirection:"column", gap:5 }}>
       <div style={{ fontSize:10, color:T.textMuted }}>{title}</div>
       <div style={{ fontSize:19, fontWeight:500, color:T.textPri, letterSpacing:"-0.03em", lineHeight:1.1 }}>{fmt(actual)}</div>
-      <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:10 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:10 }}>
         <span style={{ color:T.textMuted }}>전년 {fmt(prev)}</span>
         {yoy!=null&&<span style={{ fontWeight:500, color:yoy>=0?T.up:T.dn }}>{yoy>=0?"▲":"▼"}{Math.abs(yoy).toFixed(1)}{isRate?"%p":"%"}</span>}
       </div>
       {planVal!=null&&(
         <div style={{ borderTop:`0.5px solid ${T.gridLine}`, paddingTop:5 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10 }}>
-            <span style={{ color:T.textMuted }}>계획 {fmt(planVal)}</span>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:10 }}>
+  <span style={{ color:T.textMuted }}>계획 {fmt(planVal)}</span>
             {achievement!=null&&(
               <span style={{ fontWeight:500, color:isRate?(achievement>=0?T.up:T.dn):(achievement>=100?T.up:T.dn) }}>
-                {isRate?`${achievement>=0?"+":""}${achievement.toFixed(1)}${achievementUnit??"%p"}`:`${achievement.toFixed(1)}%`}
+                {isRate
+  ? <span style={{ display:"flex", alignItems:"center", gap:2 }}>
+      <span>{achievement>=0?"▲":"▼"}</span>
+      <span>{Math.abs(achievement).toFixed(1)}{achievementUnit??"%p"}</span>
+    </span>
+  : `${achievement.toFixed(1)}%`
+}
               </span>
             )}
           </div>
