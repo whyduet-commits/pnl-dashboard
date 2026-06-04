@@ -19,7 +19,7 @@ const MENU = [
     { icon: "👤", label: "강사 프로필 조회", path: "/instructor/profile" },
     { icon: "📊", label: "단과 강사 판매 현황", path: "/instructor" },
   ]},
-  { icon: "🗺",   label: "FloorEdit",       path: "/floor"      },
+  { icon: "🗺",   label: "도면",       path: "/floor"      },
 ];
 
 function NavBtn({ icon, label, active, onClick, sub = false, T }: {
